@@ -30,7 +30,9 @@
             "styles": [
               "src/styles.scss"
             ],
-            "scripts": [],
+            "scripts": [
+              "src/assets/wasm/libffmpeg_264_265.js"
+            ],
             "webWorkerTsConfig": "tsconfig.worker.json"
           },
           "configurations": {
