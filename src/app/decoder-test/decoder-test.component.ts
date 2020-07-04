@@ -51,7 +51,7 @@ export class DecoderTestComponent implements OnInit, OnDestroy {
     do {
       const reader = new FileReader();
       reader.onload = (ev: ProgressEvent<FileReader>) => {
-        const typedArray: ArrayBuffer = ev.target.result as ArrayBuffer;
+        const typedArray: Uint8Array = new Uint8Array(ev.target.result as ArrayBuffer);
         const size = typedArray.byteLength;
 
         let cacheBuffer = this.wasm._malloc(size);
