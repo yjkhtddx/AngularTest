@@ -1,16 +1,46 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Runner } from 'protractor';
 const CHUNK_SIZE = 4096;
+const DECODER_H264 = 0;
+const DECODER_H265 = 1;
+const LOG_LEVEL_JS = 0;
+const LOG_LEVEL_WASM = 1;
+const LOG_LEVEL_FFMPEG = 2;
 
 @Component({
   selector: 'app-decoder-test',
   templateUrl: './decoder-test.component.html',
   styleUrls: ['./decoder-test.component.scss']
 })
-export class DecoderTestComponent implements OnInit {
+export class DecoderTestComponent implements OnInit, OnDestroy {
+  private pts = 0;
+  private videoSize = 0;
+  private decoderType = DECODER_H265;
+  private decoderLogLevel = LOG_LEVEL_WASM;
+  private isWasmLoaded = false;
+  private wasm = (window as any).Module as any;
+  constructor() {
+    this.wasm = typeof this.wasm !== 'undefined' ? this.wasm : {};
+    this.wasm.onRuntimeInitialized = () => {
+      console.log('onRuntimeInitialized');
+      this.isWasmLoaded = true;
+      this.onWasmLoaded();
+    };
+  }
 
-  constructor() { }
+  private onWasmLoaded(): void {
+    const callback = this.wasm.addFunction((addr_y, addr_u, addr_v, stride_y, stride_u, stride_v, width, height, pts) => {
+      console.log('[%d]In video callback, size = %d * %d, pts = %d', ++this.videoSize, width, height, pts);
+    });
+    this.wasm._openDecoder(this.decoderType, callback, this.decoderLogLevel);
+  }
 
   ngOnInit(): void {
+  }
+
+  ngOnDestroy(): void {
+    this.wasm._flushDecoder();
+    this.wasm._closeDecoder();
   }
 
   play(files: Array<File>) {
@@ -23,10 +53,19 @@ export class DecoderTestComponent implements OnInit {
       reader.onload = (ev: ProgressEvent<FileReader>) => {
         const typedArray: ArrayBuffer = ev.target.result as ArrayBuffer;
         const size = typedArray.byteLength;
-        console.log(size);
 
-        console.count(`onload`);
-        console.log(ev);
+        let cacheBuffer = this.wasm._malloc(size);
+        this.wasm.HEAPU8.set(typedArray, cacheBuffer);
+        this.wasm._decodeData(cacheBuffer, size, this.pts++);
+        if (cacheBuffer != null) {
+          this.wasm._free(cacheBuffer);
+          cacheBuffer = null;
+        }
+        if (size < CHUNK_SIZE) {
+          console.log('Flush frame data');
+          this.wasm._flushDecoder();
+          this.wasm._closeDecoder();
+        }
       };
       streamSize = this.readFileSlice(reader, file, filePos, CHUNK_SIZE);
       filePos += streamSize;

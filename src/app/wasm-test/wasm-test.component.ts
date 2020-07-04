@@ -8,7 +8,6 @@ import { Component, OnInit } from '@angular/core';
 export class WasmTestComponent implements OnInit {
   private wasm = (window as any).Module as any;
   constructor() {
-    // console.log(`constructor ${typeof(this.wasm)}`);
     this.wasm = typeof this.wasm !== 'undefined' ? this.wasm : {};
     this.wasm.onRuntimeInitialized = () => {
       console.log('onRuntimeInitialized');
@@ -18,7 +17,6 @@ export class WasmTestComponent implements OnInit {
       const callback = wasm.addFunction(() => { });
       wasm._openDecoder(decoderType, callback, LOG_LEVEL_WASM);
     };
-    // console.log(`constructor ${typeof(this.wasm)}`);
   }
 
   ngOnInit(): void {
