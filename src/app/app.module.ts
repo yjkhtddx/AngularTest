@@ -7,6 +7,7 @@ import { WorkerTestComponent } from './worker-test/worker-test.component';
 import { CanvasTestComponent } from './canvas-test/canvas-test.component';
 import { WasmTestComponent } from './wasm-test/wasm-test.component';
 import { DecoderTestComponent } from './decoder-test/decoder-test.component';
+import { WebGLTestComponent } from './web-gltest/web-gltest.component';
 
 @NgModule({
   declarations: [
@@ -15,6 +16,7 @@ import { DecoderTestComponent } from './decoder-test/decoder-test.component';
     CanvasTestComponent,
     WasmTestComponent,
     DecoderTestComponent,
+    WebGLTestComponent,
   ],
   imports: [
     BrowserModule,

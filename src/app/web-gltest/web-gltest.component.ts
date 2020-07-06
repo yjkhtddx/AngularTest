@@ -7,11 +7,11 @@ const LOG_LEVEL_WASM = 1;
 const LOG_LEVEL_FFMPEG = 2;
 
 @Component({
-  selector: 'app-decoder-test',
-  templateUrl: './decoder-test.component.html',
-  styleUrls: ['./decoder-test.component.scss']
+  selector: 'app-web-gltest',
+  templateUrl: './web-gltest.component.html',
+  styleUrls: ['./web-gltest.component.scss']
 })
-export class DecoderTestComponent implements OnInit, OnDestroy {
+export class WebGLTestComponent implements OnInit, OnDestroy {
   private pts = 0;
   private videoSize = 0;
   private decoderType = DECODER_H265;
