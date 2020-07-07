@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { WebGLPlayer } from './webgl-player';
 const CHUNK_SIZE = 4096;
 const DECODER_H264 = 0;
 const DECODER_H265 = 1;
@@ -8,16 +9,19 @@ const LOG_LEVEL_FFMPEG = 2;
 
 @Component({
   selector: 'app-web-gltest',
-  templateUrl: './web-gltest.component.html',
-  styleUrls: ['./web-gltest.component.scss']
+  templateUrl: './webgl-test.component.html',
+  styleUrls: ['./webgl-test.component.scss']
 })
-export class WebGLTestComponent implements OnInit, OnDestroy {
+export class WebGLTestComponent implements OnInit, OnDestroy, AfterViewInit {
+  private webglPlayer?: WebGLPlayer;
   private pts = 0;
   private videoSize = 0;
   private decoderType = DECODER_H265;
   private decoderLogLevel = LOG_LEVEL_WASM;
   private isWasmLoaded = false;
   private wasm = (window as any).Module as any;
+
+  @ViewChild('playCanvas', { static: true }) playCanvas: ElementRef<HTMLCanvasElement>;
   constructor() {
     this.wasm = typeof this.wasm !== 'undefined' ? this.wasm : {};
     this.wasm.onRuntimeInitialized = () => {
@@ -25,21 +29,99 @@ export class WebGLTestComponent implements OnInit, OnDestroy {
       this.isWasmLoaded = true;
       this.onWasmLoaded();
     };
+
   }
 
+  ngAfterViewInit(): void {
+    console.log(this.playCanvas);
+    if (this.playCanvas) {
+      this.webglPlayer = new WebGLPlayer(
+        this.playCanvas.nativeElement, {}
+      );
+      console.log(this.webglPlayer);
+    }else{
+      console.error('canvas error');
+    }
+  }
   private onWasmLoaded(): void {
-    const callback = this.wasm.addFunction((addr_y, addr_u, addr_v, stride_y, stride_u, stride_v, width, height, pts) => {
-      console.log('[%d]In video callback, size = %d * %d, pts = %d', ++this.videoSize, width, height, pts);
+    const callback = this.wasm.addFunction((
+      addrY: number,
+      addrU: number,
+      addrV: number,
+      strideY: number,
+      strideU: number,
+      strideV: number,
+      width: number,
+      height: number,
+      pts: number
+    ) => {
+      console.log({addrY,
+        addrU,
+        addrV,
+        strideY,
+        strideU,
+        strideV,
+        width,
+        height,
+        pts});
+      // console.log('[%d]In video callback, size = %d * %d, pts = %d', ++this.videoSize, width, height, pts);
+      const size = width * height + (width / 2) * (height / 2) + (width / 2) * (height / 2);
+      const data = new Uint8Array(size);
+      let pos = 0;
+      for (let i = 0; i < height; i++) {
+        const src = addrY + i * strideY;
+        const tmp: ArrayBuffer = this.wasm.HEAPU8.subarray(src, src + width);
+        const u8Tmp = new Uint8Array(tmp);
+        data.set(u8Tmp, pos);
+        pos += u8Tmp.length;
+      }
+      console.log(pos);
+      for (let i = 0; i < height / 2; i++) {
+        const src = addrU + i * strideU;
+        const tmp = this.wasm.HEAPU8.subarray(src, src + width / 2);
+        const u8Tmp = new Uint8Array(tmp);
+        data.set(u8Tmp, pos);
+        pos += u8Tmp.length;
+      }
+      console.log(pos);
+      for (let i = 0; i < height / 2; i++) {
+        const src = addrV + i * strideV;
+        const tmp = this.wasm.HEAPU8.subarray(src, src + width / 2);
+        const u8Tmp = new Uint8Array(tmp);
+        data.set(u8Tmp, pos);
+        pos += u8Tmp.length;
+      }
+      console.log(pos);
+      const obj = {
+        data,
+        width,
+        height
+      };
+      this.displayVideoFrame(obj);
     });
     this.wasm._openDecoder(this.decoderType, callback, this.decoderLogLevel);
   }
 
   ngOnInit(): void {
+    console.log(this.playCanvas);
   }
 
   ngOnDestroy(): void {
     this.wasm._flushDecoder();
     this.wasm._closeDecoder();
+  }
+
+  private displayVideoFrame(obj: { data: Uint8Array, width: number, height: number }): void {
+    const data = new Uint8Array(obj.data);
+    const width = obj.width;
+    const height = obj.height;
+    const yLength = width * height;
+    const uvLength = (width / 2) * (height / 2);
+    if (this.webglPlayer) {
+      this.webglPlayer.renderSrcFrame(data, width, height, yLength, uvLength);
+    } else {
+      console.error('webgl init error');
+    }
   }
 
   play(files: Array<File>) {
