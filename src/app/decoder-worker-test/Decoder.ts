@@ -1,7 +1,14 @@
 /// <reference lib="webworker" />
 
 import { WasmDedicatedWorkerGlobalScope, WasmModule } from './WasmModule';
-import { DecoderWorkerTestMessageType as Type, DecoderWorkerTestMessage, DECODER_H265, LOG_LEVEL_FFMPEG, DecoderWorkerTestMessageType, CHUNK_SIZE } from './Common';
+import {
+    DecoderWorkerTestMessageType as Type,
+    DecoderWorkerTestMessage,
+    DECODER_H265,
+    LOG_LEVEL_FFMPEG,
+    DecoderWorkerTestMessageType,
+    CHUNK_SIZE
+} from './Common';
 
 export default class Decoder {
     private className = 'Decoder';
@@ -73,13 +80,6 @@ export default class Decoder {
                     data.set(u8Tmp, pos);
                     pos += u8Tmp.length;
                 }
-                // console.log(pos);
-                // const obj = {Failed to execute 'postMessage' on 'Worker':
-                //     data,
-                //     width,
-                //     height
-                // };
-                // this.displayVideoFrame(obj);
                 this.postMessage({ type: DecoderWorkerTestMessageType.ON_DECODE_DATA, rect: { width, height }, data });
             });
             wasmModule._openDecoder(decoderType, callback, LOG_LEVEL_WASM);
