@@ -8,6 +8,8 @@ import { CanvasTestComponent } from './canvas-test/canvas-test.component';
 import { WasmTestComponent } from './wasm-test/wasm-test.component';
 import { DecoderTestComponent } from './decoder-test/decoder-test.component';
 import { WebGLTestComponent } from './webgl-test/webgl-test.component';
+import { WasmWorkerTestComponent } from './wasm-worker-test/wasm-worker-test.component';
+import { DecoderWorkerTestComponent } from './decoder-worker-test/decoder-worker-test.component';
 
 @NgModule({
   declarations: [
@@ -17,6 +19,8 @@ import { WebGLTestComponent } from './webgl-test/webgl-test.component';
     WasmTestComponent,
     DecoderTestComponent,
     WebGLTestComponent,
+    WasmWorkerTestComponent,
+    DecoderWorkerTestComponent,
   ],
   imports: [
     BrowserModule,
