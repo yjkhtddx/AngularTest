@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ElementRef, AfterViewInit, ViewChild } from '@angular/core';
 import { WebGLPlayer } from './webgl-player';
-import { CHUNK_SIZE, DecoderWorkerTestMessage } from './Common';
+import { CHUNK_SIZE, DecoderWorkerTestMessage, DecoderWorkerTestMessageType } from './Common';
 
 @Component({
   selector: 'app-decoder-worker-test',
@@ -30,16 +30,20 @@ export class DecoderWorkerTestComponent implements OnInit, OnDestroy, AfterViewI
     const file = files[0];
     let filePos = 0;
     let streamSize = 0;
-    do {
-      const reader = new FileReader();
-      reader.onload = (ev: ProgressEvent<FileReader>) => {
-        const typedArray: Uint8Array = new Uint8Array(ev.target.result as ArrayBuffer);
-        const size = typedArray.byteLength;
-        // TODO
-      };
+
+    const reader = new FileReader();
+    reader.onload = (ev: ProgressEvent<FileReader>) => {
+      const typedArray: Uint8Array = new Uint8Array(ev.target.result as ArrayBuffer);
+      this.postMessage(this.worker, { type: DecoderWorkerTestMessageType.ON_DATA, data: typedArray });
+    };
+    const interval = window.setInterval(() => {
       streamSize = this.readFileSlice(reader, file, filePos, CHUNK_SIZE);
       filePos += streamSize;
-    } while (streamSize > 0);
+      if (streamSize <= 0) {
+        window.clearInterval(interval);
+      }
+    }, 200);
+
   }
 
   private readFileSlice(reader: FileReader, file: File, startAddr: number, size: number) {
@@ -65,7 +69,23 @@ export class DecoderWorkerTestComponent implements OnInit, OnDestroy, AfterViewI
 
   private handleMessage(message: DecoderWorkerTestMessage) {
     console.log(message);
-    // TODO
+    switch (message.type) {
+      case DecoderWorkerTestMessageType.ON_DECODE_DATA:
+        const width = message.rect.width;
+        const height = message.rect.height;
+        const yLength = width * height;
+        const uvLength = (width / 2) * (height / 2);
+        if (this.webglPlayer) {
+          this.webglPlayer.renderSrcFrame(message.data, width, height, yLength, uvLength);
+        } else {
+          console.error('webgl init error');
+        }
+        break;
+
+      default:
+        break;
+    }
+
   }
 
   public runWorker(): void {
@@ -81,7 +101,8 @@ export class DecoderWorkerTestComponent implements OnInit, OnDestroy, AfterViewI
   private postMessage(worker: Worker, message: DecoderWorkerTestMessage) {
     if (worker) {
       if (message.data) {
-        worker.postMessage(message, [message.data]);
+        console.log(message);
+        worker.postMessage(message, [message.data.buffer]);
       } else {
         worker.postMessage(message);
       }

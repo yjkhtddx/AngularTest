@@ -15,5 +15,6 @@ export enum DecoderWorkerTestMessageType {
 
 export interface DecoderWorkerTestMessage {
     type: DecoderWorkerTestMessageType;
+    rect?: { width: number, height: number };
     data?: Uint8Array;
 }

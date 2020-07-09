@@ -1,1 +1,7 @@
-<p>decoder-worker-test works!</p>
+<div style="margin: 20px; display: inline;">
+  H265文件:
+  <input type="file" #H265FileInput (change)="play(H265FileInput.files);">
+</div>
+<div style="margin-top: 10px; display: block; width: 540px; height: 360px; background-color: black;">
+  <canvas #playCanvas width="540px" height="360px"></canvas>
+</div>

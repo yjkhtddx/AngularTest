@@ -1,21 +1,25 @@
 /// <reference lib="webworker" />
 
 import { WasmDedicatedWorkerGlobalScope, WasmModule } from './WasmModule';
-import { DecoderWorkerTestMessageType as Type, DecoderWorkerTestMessage, DECODER_H265, LOG_LEVEL_FFMPEG, DecoderWorkerTestMessageType } from './Common';
-import { NgModule } from '@angular/core';
+import { DecoderWorkerTestMessageType as Type, DecoderWorkerTestMessage, DECODER_H265, LOG_LEVEL_FFMPEG, DecoderWorkerTestMessageType, CHUNK_SIZE } from './Common';
 
 export default class Decoder {
+    private className = 'Decoder';
     private worker = self as unknown as WasmDedicatedWorkerGlobalScope;
     private wasm: WasmModule;
+    private pts = 0;
     // private decodeTimer?: number = undefined;
     private isWasmLoaded = false;
     constructor() {
+        this.postMessage({ type: DecoderWorkerTestMessageType.ON_INIT });
+        console.log(`constructor ${this.className}`);
         this.worker.name = 'DecoderWorker';
-        this.wasm = this.wasm;
-        this.wasm = typeof this.wasm !== 'undefined' ? this.wasm : {};
+        this.worker.Module = typeof this.worker.Module !== 'undefined' ? this.worker.Module : {};
+        this.wasm = this.worker.Module;
         this.wasm.onRuntimeInitialized = () => {
-            this.postMessage({ type: DecoderWorkerTestMessageType.ON_WASM_LOADED });
             console.log('onRuntimeInitialized');
+            this.postMessage({ type: DecoderWorkerTestMessageType.ON_WASM_LOADED });
+            this.isWasmLoaded = true;
             const wasmModule: WasmModule = this.wasm as WasmModule;
             const decoderType = DECODER_H265;
             const LOG_LEVEL_WASM = LOG_LEVEL_FFMPEG;
@@ -53,7 +57,7 @@ export default class Decoder {
                     data.set(u8Tmp, pos);
                     pos += u8Tmp.length;
                 }
-                console.log(pos);
+                // console.log(pos);
                 for (let i = 0; i < height / 2; i++) {
                     const src = addrU + i * strideU;
                     const tmp = this.wasm.HEAPU8.subarray(src, src + width / 2);
@@ -61,7 +65,7 @@ export default class Decoder {
                     data.set(u8Tmp, pos);
                     pos += u8Tmp.length;
                 }
-                console.log(pos);
+                // console.log(pos);
                 for (let i = 0; i < height / 2; i++) {
                     const src = addrV + i * strideV;
                     const tmp = this.wasm.HEAPU8.subarray(src, src + width / 2);
@@ -69,13 +73,14 @@ export default class Decoder {
                     data.set(u8Tmp, pos);
                     pos += u8Tmp.length;
                 }
-                console.log(pos);
-                // const obj = {
+                // console.log(pos);
+                // const obj = {Failed to execute 'postMessage' on 'Worker':
                 //     data,
                 //     width,
                 //     height
                 // };
                 // this.displayVideoFrame(obj);
+                this.postMessage({ type: DecoderWorkerTestMessageType.ON_DECODE_DATA, rect: { width, height }, data });
             });
             wasmModule._openDecoder(decoderType, callback, LOG_LEVEL_WASM);
         };
@@ -88,21 +93,41 @@ export default class Decoder {
 
     private postMessage(message: DecoderWorkerTestMessage) {
         if (message.data) {
-            this.worker.postMessage(message, [message.data]);
+            this.worker.postMessage(message, [message.data.buffer]);
         } else {
             this.worker.postMessage(message);
         }
     }
 
-    public onMessage(req: DecoderWorkerTestMessage): void {
+    private wasmFeedData(data: Uint8Array) {
+        const size = data.byteLength;
+        let cacheBuffer = this.wasm._malloc(size);
+        this.wasm.HEAPU8.set(data, cacheBuffer);
+        this.wasm._decodeData(cacheBuffer, size, this.pts++);
+        if (cacheBuffer != null) {
+            this.wasm._free(cacheBuffer);
+            cacheBuffer = null;
+        }
+        if (size < CHUNK_SIZE) {
+            console.log('Flush frame data');
+            this.wasm._flushDecoder();
+            this.wasm._closeDecoder();
+        }
+    }
+
+    private onMessage(message: DecoderWorkerTestMessage): void {
         if (!this.isWasmLoaded) {
             console.log('wait wasm loaded');
             return;
         }
-    }
-    public sendMessage(type: Type, data?: Uint8Array): void {
-        this.worker.postMessage(data);
-    }
+        switch (message.type) {
+            case DecoderWorkerTestMessageType.ON_DATA:
+                this.wasmFeedData(message.data);
+                break;
 
+            default:
+                break;
+        }
+    }
 }
 
