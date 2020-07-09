@@ -32,11 +32,7 @@
 
 [基于 webassembly 的 H265 视频播放器前端 Angular 学习笔记 7:在 WebWorker 中解码 H265 数据](https://blog.csdn.net/yjkhtddx/article/details/107221257)
 
-## 多屏播放 H265 视频文件
-
-[基于 webassembly 的 H265 视频播放器前端 Angular 学习笔记 8:多屏播放 H265 视频文件](https://blog.csdn.net/yjkhtddx/article/details/)
-
 ## 学习源码分享（gitee，github）欢迎交流
 
-[基于 webassembly 的 H265 视频播放器前端 Angular 学习笔记 9:多屏播放 H265 视频文件](https://blog.csdn.net/yjkhtddx/article/details/)
+[基于 webassembly 的 H265 视频播放器前端 Angular 学习笔记 8:学习源码分享](https://blog.csdn.net/yjkhtddx/article/details/)
 
